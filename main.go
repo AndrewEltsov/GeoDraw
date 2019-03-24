@@ -12,7 +12,7 @@ import (
 )
 
 func main() {
-	var fileDest = flag.String("d", "world.geo.json-master/countries.geo.json", "Destination of file")
+	var fileDest = flag.String("d", "countries.geo.json", "Destination of file")
 	flag.Parse()
 	fmt.Println(*fileDest)
 
