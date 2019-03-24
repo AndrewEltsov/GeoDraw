@@ -4,6 +4,7 @@ import (
 	"flag"
 	"fmt"
 	"io/ioutil"
+	"math"
 
 	"github.com/fogleman/gg"
 
@@ -11,13 +12,14 @@ import (
 )
 
 func main() {
-	var fileDest = flag.String("d", "borders.geojson", "Destination of file")
+	var fileDest = flag.String("d", "world.geo.json-master/countries.geo.json", "Destination of file")
 	flag.Parse()
 	fmt.Println(*fileDest)
+
 	dc := gg.NewContext(1366, 1024)
 
 	dc.InvertY()
-	dc.Scale(7, 12)
+	dc.Scale(0.00003415, 0.00003415)
 
 	rawFeatureJSON, err := ioutil.ReadFile(*fileDest)
 	if err != nil {
@@ -94,16 +96,25 @@ func drawGeometry(g *geojson.Geometry, c *gg.Context) {
 }
 
 func drawLine(l [][]float64, c *gg.Context) {
+	x, y := getMercator(l[0][1], l[0][0])
+	x += 20000000
+	y += 15000000
 	c.SetHexColor("0f0")
-	c.MoveTo(l[0][0], l[0][1])
+	c.MoveTo(x, y)
 	for _, p := range l {
+		x, y = getMercator(p[1], p[0])
+		x += 20000000
+		y += 15000000
 		c.LineTo(p[0], p[1])
 	}
 }
 
 func drawPoint(p []float64, c *gg.Context) {
+	x, y := getMercator(p[1], p[0])
+	x += 20000000
+	y += 15000000
 	c.SetHexColor("00f")
-	c.DrawPoint(p[0], p[1], 5)
+	c.DrawPoint(x, y, 5)
 }
 
 func drawPolygon(polygon [][]float64, c *gg.Context) {
@@ -113,12 +124,9 @@ func drawPolygon(polygon [][]float64, c *gg.Context) {
 	var x float64
 	var y float64
 	for i := 0; i < len(polygon); i++ {
-		if polygon[i][0] < 0 {
-			x = polygon[i][0] + 180*2
-		} else {
-			x = polygon[i][0]
-		}
-		y = polygon[i][1]
+		x, y = getMercator(polygon[i][1], polygon[i][0])
+		x += 20000000
+		y += 15000000
 		c.LineTo(x, y)
 	}
 	c.SetHexColor("fff")
@@ -127,9 +135,21 @@ func drawPolygon(polygon [][]float64, c *gg.Context) {
 
 func drawBackground(color string, c *gg.Context) {
 	c.MoveTo(0, 0)
-	c.LineTo(1366, 0)
-	c.LineTo(1366, 1024)
-	c.LineTo(0, 1024)
+	c.LineTo(40000000, 0)
+	c.LineTo(40000000, 30000000)
+	c.LineTo(0, 30000000)
 	c.SetHexColor(color)
 	c.Fill()
+}
+
+func getMercator(lat float64, long float64) (float64, float64) {
+	rLat := lat*math.Pi/180
+	rLong := long*math.Pi/180
+	a := 6378137.0
+	b := 6356752.3142
+	f :=(a-b)/a
+	e :=math.Sqrt(2*f-math.Pow(f, 2))
+	X := a*rLong
+	Y := a*math.Log(math.Tan(math.Pi/4+rLat/2)*math.Pow(((1-e*math.Sin(rLat))/(1+e*math.Sin(rLat))), (e/2)))
+	return X, Y
 }
